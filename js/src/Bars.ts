@@ -192,7 +192,7 @@ export class Bars extends Mark {
       this.d3el
         .select('.zeroLine')
         .attr('x1', 0)
-        .attr('x2', this.parent.plotarea_width)
+        .attr('x2', this.parent.plotareaWidth)
         .attr('y1', rangeScale(this.model.baseValue))
         .attr('y2', rangeScale(this.model.baseValue));
     } else {
@@ -201,7 +201,7 @@ export class Bars extends Mark {
         .attr('x1', rangeScale(this.model.baseValue))
         .attr('x2', rangeScale(this.model.baseValue))
         .attr('y1', 0)
-        .attr('y2', this.parent.plotarea_height);
+        .attr('y2', this.parent.plotareaHeight);
     }
   }
 
@@ -420,7 +420,7 @@ export class Bars extends Mark {
           rang === 'y' ? rangeScale(d.y1) : rangeScale(d.y0)
         )
         .attr(rangeControl, (d: BarGroupValue) =>
-          Math.abs(rangeScale(d.y1 + d.yRef) - rangeScale(d.y1))
+          Math.abs(rangeScale(d.y0) - rangeScale(d.y1))
         );
     } else {
       bandWidth = Math.max(1.0, this.groupedScale.bandwidth());
@@ -460,8 +460,8 @@ export class Bars extends Mark {
           : d3.min([rangeScale(d.y), rangeScale(this.model.baseValue)]);
         rectCoords[domControl] = bandWidth;
         rectCoords[rangeControl] = isStacked
-          ? Math.abs(rangeScale(d.y1 + d.yRef) - rangeScale(d.y1))
-          : Math.abs(rangeScale(this.model.baseValue) - rangeScale(d.yRef));
+          ? Math.abs(rangeScale(d.y0) - rangeScale(d.y1))
+          : Math.abs(rangeScale(this.model.baseValue) - rangeScale(d.y));
         return [
           [rectCoords.x, rectCoords.x + rectCoords.width],
           [rectCoords.y, rectCoords.y + rectCoords.height],
@@ -961,8 +961,8 @@ export class Bars extends Mark {
     let xPadding = 0;
     const avail_space =
       orient === 'vertical'
-        ? this.parent.plotarea_width
-        : this.parent.plotarea_height;
+        ? this.parent.plotareaWidth
+        : this.parent.plotareaHeight;
     if (domScale) {
       if (
         this.stackedScale !== null &&

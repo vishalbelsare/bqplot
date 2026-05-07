@@ -51,6 +51,9 @@ class Figure(DOMWidget):
     Besides, the Figure object has two reference scales, for positioning items
     in an absolute fashion in the figure canvas.
 
+    Style Attributes
+    ----------------
+
     Attributes
     ----------
     title: string (default: '')
@@ -84,47 +87,43 @@ class Figure(DOMWidget):
         CSS style to be applied to the title of the figure
     animation_duration: nonnegative int (default: 0)
         Duration of transition on change of data attributes, in milliseconds.
+
+    Layout Attributes
+    -----------------
+
+    Attributes
+    ----------
     pixel_ratio:
         Pixel ratio of the WebGL canvas (2 on retina screens). Set to 1 for better performance,
         but less crisp edges. If set to None it will use the browser's window.devicePixelRatio.
     display_toolbar: boolean (default: True)
         Show or hide the integrated toolbar.
-
-    Layout Attributes
-
     fig_margin: dict (default: {top=60, bottom=60, left=60, right=60})
         Dictionary containing the top, bottom, left and right margins. The user
         is responsible for making sure that the width and height are greater
         than the sum of the margins.
+    auto_layout: boolean (default: False)
+        Whether to use the auto-layout solver or not
     min_aspect_ratio: float
-         minimum width / height ratio of the figure
+        Minimum width / height ratio of the figure
     max_aspect_ratio: float
-         maximum width / height ratio of the figure
+        Maximum width / height ratio of the figure
 
-    Methods
-    -------
+    !!! Note
 
-    save_png:
-       Saves the figure as a PNG file
-    save_svg:
-       Saves the figure as an SVG file
+        The aspect ratios stand for width / height ratios.
 
-    Note
-    ----
+        - If the available space is within bounds in terms of min and max aspect
+        ratio, we use the entire available space.
+        - If the available space is too oblong horizontally, we use the client
+        height and the width that corresponds max_aspect_ratio (maximize width
+        under the constraints).
+        - If the available space is too oblong vertically, we use the client width
+        and the height that corresponds to min_aspect_ratio (maximize height
+        under the constraint).
+        This corresponds to maximizing the area under the constraints.
 
-    The aspect ratios stand for width / height ratios.
-
-     - If the available space is within bounds in terms of min and max aspect
-       ratio, we use the entire available space.
-     - If the available space is too oblong horizontally, we use the client
-       height and the width that corresponds max_aspect_ratio (maximize width
-       under the constraints).
-     - If the available space is too oblong vertically, we use the client width
-       and the height that corresponds to min_aspect_ratio (maximize height
-       under the constraint).
-       This corresponds to maximizing the area under the constraints.
-
-    Default min and max aspect ratio are both equal to 16 / 9.
+        Default min and max aspect ratio are both equal to 16 / 9.
     """
     title = Unicode().tag(sync=True, display_name='Title')
     axes = List(Instance(Axis)).tag(sync=True, **widget_serialization)
@@ -140,6 +139,7 @@ class Figure(DOMWidget):
     legend_text = Dict().tag(sync=True)
     theme = Enum(['classic', 'gg'], default_value='classic').tag(sync=True)
 
+    auto_layout = Bool(False).tag(sync=True)
     min_aspect_ratio = Float(0.01).tag(sync=True)
     max_aspect_ratio = Float(100).tag(sync=True)
     pixel_ratio = Float(None, allow_none=True).tag(sync=True)
@@ -160,6 +160,7 @@ class Figure(DOMWidget):
         super(Figure, self).__init__(**kwargs)
 
         self._upload_png_callback = None
+        self._upload_svg_callback = None
         self.on_msg(self._handle_custom_msgs)
 
     @default('scale_x')
@@ -202,7 +203,6 @@ class Figure(DOMWidget):
         ----------
         callback: callable
             Called with the PNG data as the only positional argument.
-
         scale: float (default: None)
             Scale up the png resolution when scale > 1, when not given base this on the screen pixel ratio.
         '''
@@ -210,6 +210,20 @@ class Figure(DOMWidget):
             raise Exception('get_png_data already in progress')
         self._upload_png_callback = callback
         self.send({'type': 'upload_png', 'scale': scale})
+
+    def get_svg_data(self, callback):
+        '''
+        Gets the Figure as an SVG memory view (utf-8 encoded bytes).
+
+        Parameters
+        ----------
+        callback: callable
+            Called with the SVG data (utf-8 encoded bytes) as the only positional argument.
+        '''
+        if self._upload_svg_callback:
+            raise Exception('get_svg_data already in progress')
+        self._upload_svg_callback = callback
+        self.send({'type': 'upload_svg'})
 
     @validate('min_aspect_ratio', 'max_aspect_ratio')
     def _validate_aspect_ratio(self, proposal):
@@ -228,6 +242,11 @@ class Figure(DOMWidget):
                 self._upload_png_callback(buffers[0])
             finally:
                 self._upload_png_callback = None
+        elif content.get('event') == 'upload_svg':
+            try:
+                self._upload_svg_callback(buffers[0])
+            finally:
+                self._upload_svg_callback = None
 
     _view_name = Unicode('Figure').tag(sync=True)
     _model_name = Unicode('FigureModel').tag(sync=True)

@@ -26,7 +26,8 @@ pip-log.txt
 .coverage
 .tox
 nosetests.xml
-ui-tests/test-output/*
+ui-tests/test-results
+ui-tests/playwright-report
 
 # Translations
 *.mo
@@ -64,3 +65,10 @@ node_modules
 *.swp
 
 *.tsbuildinfo
+*.log
+
+# mkdocs
+site/
+
+.yarn
+ui-tests/.yarn

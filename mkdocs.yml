@@ -1,0 +1,96 @@
+site_name: bqplot
+site_url: https://bqplot.github.io/bqplot
+repo_name: bqplot/bqplot
+repo_url: https://github.com/bqplot/bqplot
+theme:
+  name: material
+  custom_dir: custom_theme/
+  logo: https://raw.githubusercontent.com/bqplot/design/master/bqplot-logo-notext-nobackground.svg
+  favicon: https://raw.githubusercontent.com/bqplot/design/master/bqplot-logo-notext-nobackground.svg
+  extra:
+    homepage: https://bqplot.github.io/bqplot
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.tabs
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.inlinehilite
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - md_in_html
+  - attr_list
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_root_toc_entry: false
+            docstring_style: numpy
+            docstring_section_style: spacy
+            show_source: false
+nav:
+    - bqplot: index.md
+    - Installation: installation.md
+    - Usage:
+      - Pyplot: usage/pyplot.md
+      - Object Model: usage/object-model.md
+      - Updating Plots: usage/updating-plots.md
+      - Figure: usage/figure.md
+      - Scales: usage/scales.md
+      - Axes: usage/axes.md
+      - Marks:
+        - Introduction: usage/marks/index.md
+        - Lines: usage/marks/lines.md
+        - Bars: usage/marks/bars.md
+        - Scatter: usage/marks/scatter.md
+        - Pie: usage/marks/pie.md
+        - Map: usage/marks/map.md
+        - Heatmap: usage/marks/heatmap.md
+        - Gridheatmap: usage/marks/gridheatmap.md
+        - Marketmap: usage/marks/market.md
+        - Label: usage/marks/label.md
+      - Interactions:
+        - Mark Interactions: usage/interactions/mark-interactions.md
+        - Selectors: usage/interactions/selectors.md
+        - Panzoom: usage/interactions/panzoom.md
+        - Handdraw: usage/interactions/hand-draw.md
+      - Advanced:
+        - Linking With ipywidgets: usage/advanced/linking-ipywidgets.md
+        - Dashboarding: usage/advanced/dashboards.md
+        - Compound Widgets: usage/advanced/compound-widgets.md
+    - API Documentation:
+      - Pyplot: api/pyplot.md
+      - Figure: api/figure.md
+      - Scales: api/scales.md
+      - Axes: api/axes.md
+      - Marks: api/marks.md
+      - Tooltip: api/tooltip.md
+      - Toolbar: api/toolbar.md
+      - Interactions: api/interactions.md
+      - MarketMap: api/market_map.md
+    - Migration Guide: migrate.md
+    - Contributing: contributing.md

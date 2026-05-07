@@ -1,0 +1,3 @@
+
+::: bqplot.axes
+    handler: python

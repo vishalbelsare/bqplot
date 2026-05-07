@@ -1,0 +1,3 @@
+
+::: bqplot.interacts
+    handler: python

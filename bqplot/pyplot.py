@@ -12,41 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""
-
-======
-Pyplot
-======
-
-.. currentmodule:: bqplot.pyplot
-
-.. autosummary::
-   :toctree: _generate/
-
-   figure
-   show
-   axes
-
-   plot
-   scatter
-   hist
-   bar
-   ohlc
-   geo
-
-   clear
-   close
-   current_figure
-
-   scales
-   xlim
-   ylim
-
-   axes
-   xlabel
-   ylabel
-
-"""
 import sys
 from collections import OrderedDict
 from IPython.display import display
@@ -94,7 +59,8 @@ COLOR_CODES = {'b': 'blue', 'g': 'green', 'r': 'red', 'c': 'cyan',
                'm': 'magenta', 'y': 'yellow', 'k': 'black'}
 
 MARKER_CODES = {'o': 'circle', 'v': 'triangle-down', '^': 'triangle-up',
-                's': 'square', 'd': 'diamond', '+': 'cross'}
+                's': 'square', 'd': 'diamond', '+': 'cross', 'p': 'plus',
+                'x': 'crosshair', '.': 'point'}
 
 
 PY2 = sys.version_info[0] == 2
@@ -105,8 +71,8 @@ else:
     string_types = str,
 
 
+# Determine whether `v` can be hashed.
 def hashable(data, v):
-    """Determine whether `v` can be hashed."""
     try:
         data[v]
     except (TypeError, KeyError, IndexError):
@@ -201,7 +167,7 @@ def figure(key=None, fig=None, **kwargs):
     # from the possible dimensions in the figure to the list of scales with
     # respect to which axes have been drawn for this figure.
     # Used to automatically generate axis.
-    if(getattr(_context['figure'], 'axis_registry', None) is None):
+    if getattr(_context['figure'], 'axis_registry', None) is None:
         setattr(_context['figure'], 'axis_registry', {})
     return _context['figure']
 
@@ -388,7 +354,7 @@ def axes(mark=None, options={}, **kwargs):
         # An axis must be created. We fetch the type from the registry
         # the key being provided in the scaled attribute decoration
         key = mark.class_traits()[name].get_metadata('atype')
-        if(key is not None):
+        if key is not None:
             axis_type = Axis.axis_types[key]
             axis = axis_type(scale=scales[name], **axis_args)
             axes[name] = axis
@@ -700,7 +666,7 @@ def plot(*args, **kwargs):
         else:
             kwargs['x'] = _infer_x_for_line(args[0])
     elif len(args) == 2:
-        if type(args[1]) == str:
+        if isinstance(args[1], str):
             kwargs['y'] = args[0]
             kwargs['x'] = _infer_x_for_line(args[0])
             marker_str = args[1].strip()
@@ -710,7 +676,7 @@ def plot(*args, **kwargs):
     elif len(args) == 3:
         kwargs['x'] = args[0]
         kwargs['y'] = args[1]
-        if type(args[2]) == str:
+        if isinstance(args[2], str):
             marker_str = args[2].strip()
 
     if marker_str:
@@ -1324,7 +1290,7 @@ def _get_attribute_dimension(trait_name, mark_type=None):
     as is.
     Returns `None` if the `trait_name` is not valid for `mark_type`.
     """
-    if(mark_type is None):
+    if mark_type is None:
         return trait_name
     scale_metadata = mark_type.class_traits()['scales_metadata']\
         .default_args[0]

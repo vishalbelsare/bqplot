@@ -12,22 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""
-
-====
-Axes
-====
-
-.. currentmodule:: bqplot.axes
-
-.. autosummary::
-   :toctree: _generate/
-
-   Axis
-   ColorAxis
-"""
-
-from traitlets import Int, Unicode, Instance, Enum, Dict, Bool
+from traitlets import observe, Int, Unicode, Instance, Enum, Dict, Bool
 from traittypes import Array
 from ipywidgets import Widget, Color, widget_serialization
 
@@ -36,13 +21,11 @@ from .traits import array_serialization, array_dimension_bounds
 from ._version import __frontend_version__
 
 
+# Returns a decorator registering an axis class in the axis type registry.
+# If no key is provided, the class name is used as a key. A key is provided
+# for each core bqplot axis so that the frontend can use this key regardless
+# of the kernel language.
 def register_axis(key=None):
-    """Returns a decorator registering an axis class in the axis type registry.
-
-    If no key is provided, the class name is used as a key. A key is provided
-    for each core bqplot axis so that the frontend can use this key regardless
-    of the kernel language.
-    """
     def wrap(axis):
         name = key if key is not None else axis.__module__ + axis.__name__
         BaseAxis.axis_types[name] = axis
@@ -63,7 +46,7 @@ class Axis(BaseAxis):
 
     """A line axis.
 
-    A line axis is the visual representation of a numerical or date scale.
+    A line axis is the visual representation of a **numerical** or **date scale**.
 
     Attributes
     ----------
@@ -85,6 +68,10 @@ class Axis(BaseAxis):
         If tick_values is None, number of ticks
     tick_values: numpy.ndarray or None (default: None)
         Tick values for the axis
+    tick_labels: dict (default: None)
+        Override the tick labels with a dictionary of {value: label}.
+        Entries are optional, and if not provided, the default tick labels
+        will be used.
     offset: dict (default: {})
         Contains a scale and a value {'scale': scale or None,
         'value': value of the offset}
@@ -115,10 +102,7 @@ class Axis(BaseAxis):
         Degrees to rotate tick labels by.
     """
     icon = 'fa-arrows'
-    orientation = Enum(['horizontal', 'vertical'], default_value='horizontal')\
-        .tag(sync=True)
-    side = Enum(['bottom', 'top', 'left', 'right'],
-                allow_none=True, default_value=None).tag(sync=True)
+    side = Enum(['bottom', 'top', 'left', 'right'], default_value='bottom').tag(sync=True)
     label = Unicode().tag(sync=True)
     grid_lines = Enum(['none', 'solid', 'dashed'], default_value='solid')\
         .tag(sync=True)
@@ -128,6 +112,7 @@ class Axis(BaseAxis):
     tick_values = Array(None, allow_none=True)\
         .tag(sync=True, **array_serialization)\
         .valid(array_dimension_bounds(1, 1))
+    tick_labels = Dict(None, allow_none=True).tag(sync=True)
     offset = Dict().tag(sync=True, **widget_serialization)
     label_location = Enum(['middle', 'start', 'end'],
                           default_value='middle').tag(sync=True)
@@ -142,7 +127,45 @@ class Axis(BaseAxis):
 
     _view_name = Unicode('Axis').tag(sync=True)
     _model_name = Unicode('AxisModel').tag(sync=True)
-    _ipython_display_ = None  # We cannot display an axis outside of a figure.
+
+    # We cannot display axes outside of a figure
+    # for ipywidgets <=7
+    _ipython_display_ = None
+
+    # for ipywidgets >=8
+    def _repr_mimebundle_(self, **kwargs):
+        return {'text/plain': str(self)}
+
+    def __init__(self, *args, **kwargs):
+        super(Axis, self).__init__(**kwargs)
+
+        if kwargs.get('orientation') is not None:
+            self.orientation = kwargs.get('orientation')
+
+    @property
+    def orientation(self):
+        return 'vertical' if self.side in ['right', 'left'] else 'horizontal'
+
+    @orientation.setter
+    def orientation(self, orientation):
+        if orientation not in ['horizontal', 'vertical']:
+            raise ValueError('orientation must be "horizontal" or "vertical"')
+
+        if orientation == 'horizontal' and self.side not in ['bottom', 'top']:
+            self.side = 'bottom'
+
+        if orientation == 'vertical' and self.side not in ['right', 'left']:
+            self.side = 'left'
+
+    @observe('side')
+    def _observe_side(self, change):
+        side = change['new']
+
+        if side in ['left', 'right'] and self.orientation != 'vertical':
+            self.orientation = 'vertical'
+
+        if side in ['bottom', 'top'] and self.orientation != 'horizontal':
+            self.orientation = 'horizontal'
 
 
 @register_axis('bqplot.ColorAxis')
@@ -150,18 +173,13 @@ class ColorAxis(Axis):
 
     """A colorbar axis.
 
-    A color axis is the visual representation of a color scale.
+    A color axis is the visual representation of a **color scale**.
 
     Attributes
     ----------
     scale: ColorScale
         The scale represented by the axis
     """
-    orientation = Enum(['horizontal', 'vertical'],
-                       default_value='horizontal').tag(sync=True)
-    side = Enum(['bottom', 'top', 'left', 'right'],
-                default_value='bottom').tag(sync=True)
-    label = Unicode().tag(sync=True)
     scale = Instance(ColorScale).tag(sync=True, **widget_serialization)
     _view_name = Unicode('ColorAxis').tag(sync=True)
     _model_name = Unicode('ColorAxisModel').tag(sync=True)

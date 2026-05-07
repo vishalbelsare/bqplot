@@ -5,6 +5,7 @@ import * as services from '@jupyterlab/services';
 import * as Backbone from 'backbone';
 import * as widgets from '@jupyter-widgets/controls';
 import * as base from '@jupyter-widgets/base';
+import * as baseManager from '@jupyter-widgets/base-manager';
 import * as bqscales from 'bqscales';
 
 let numComms = 0;
@@ -52,7 +53,7 @@ export class MockComm {
   _on_close: Function = null;
 }
 
-export class DummyManager extends base.ManagerBase<HTMLElement> {
+export class DummyManager extends baseManager.ManagerBase {
   constructor(library: any) {
     super();
     this.el = window.document.createElement('div');
@@ -61,16 +62,20 @@ export class DummyManager extends base.ManagerBase<HTMLElement> {
   }
 
   // @ts-ignore
-  display_view(
+  async display_view(
     msg: services.KernelMessage.IMessage,
     view: Backbone.View<Backbone.Model>,
     options: any
   ) {
-    return Promise.resolve(view).then((view) => {
+    await Promise.resolve(view).then(async (view) => {
       this.el.appendChild(view.el);
       view.on('remove', () => console.log('view removed', view));
       (<any>window).last_view = view;
       view.trigger('displayed');
+      if (view['renderImpl']) {
+        view['attached'] = true;
+        await view['renderImpl']();
+      }
       return view.el;
     });
   }

@@ -22,7 +22,7 @@ import { MessageLoop } from '@lumino/messaging';
 
 import { Widget } from '@lumino/widgets';
 
-import { d3GetEvent } from './utils';
+import { d3GetEvent, getLuminoWidget } from './utils';
 import * as _ from 'underscore';
 import { MarkModel } from './MarkModel';
 import { Figure } from './Figure';
@@ -76,7 +76,7 @@ export abstract class Mark extends widgets.WidgetView {
     }
     this.tooltip_div = d3
       .select(document.createElement('div'))
-      .attr('class', 'mark_tooltip')
+      .attr('class', 'bqplot_mark_tooltip')
       .attr('id', 'tooltip_' + this.uuid)
       .style('display', 'none')
       .style('opacity', 0);
@@ -341,7 +341,10 @@ export abstract class Mark extends widgets.WidgetView {
         'display',
         null
       );
-      MessageLoop.sendMessage(this.tooltip_view.pWidget, Widget.Msg.AfterShow);
+      MessageLoop.sendMessage(
+        getLuminoWidget(this.tooltip_view),
+        Widget.Msg.AfterShow
+      );
       this.parent.popper.enableEventListeners();
       this.move_tooltip();
     }
@@ -389,9 +392,9 @@ export abstract class Mark extends widgets.WidgetView {
       this.create_child_view(tooltip_model).then((view) => {
         this.tooltip_view = view;
 
-        MessageLoop.sendMessage(view.pWidget, Widget.Msg.BeforeAttach);
+        MessageLoop.sendMessage(getLuminoWidget(view), Widget.Msg.BeforeAttach);
         this.tooltip_div.node().appendChild(view.el);
-        MessageLoop.sendMessage(view.pWidget, Widget.Msg.AfterAttach);
+        MessageLoop.sendMessage(getLuminoWidget(view), Widget.Msg.AfterAttach);
       });
     }
   }

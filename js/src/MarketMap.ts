@@ -35,10 +35,10 @@ import { MarketMapModel } from './MarketMapModel';
 import { Tooltip } from './Tooltip';
 import * as popperreference from './PopperReference';
 import popper from 'popper.js';
-import { applyAttrs, applyStyles } from './utils';
+import { applyAttrs, applyStyles, getLuminoWidget } from './utils';
 
 export class MarketMap extends Figure {
-  protected renderImpl() {
+  protected async renderImpl() {
     const figureSize = this.getFigureSize();
     this.width = figureSize.width;
     this.height = figureSize.height;
@@ -48,7 +48,6 @@ export class MarketMap extends Figure {
     this.scales = {};
     this.set_top_el_style();
 
-    this.margin = this.model.get('map_margin');
     this.num_rows = this.model.get('rows');
     this.num_cols = this.model.get('cols');
     this.row_groups = this.model.get('row_groups');
@@ -85,7 +84,7 @@ export class MarketMap extends Figure {
     // code for tool tip to be displayed
     this.tooltip_div = d3
       .select(document.createElement('div'))
-      .attr('class', 'mark_tooltip');
+      .attr('class', 'bqplot_mark_tooltip');
     applyStyles(this.tooltip_div, { opacity: 0, 'pointer-events': 'none' });
 
     const freeze_tooltip_loc = this.model.get('freeze_tooltip_location');
@@ -117,13 +116,13 @@ export class MarketMap extends Figure {
       .attr('class', 'mainheading')
       .text(this.model.get('title'));
     applyAttrs(this.title, {
-      x: 0.5 * this.plotarea_width,
+      x: 0.5 * this.plotareaWidth,
       y: -(this.margin.top / 2.0),
       dy: '1em',
     });
     applyStyles(this.title, this.model.get('title_style'));
 
-    return this.create_scale_views().then(() => {
+    await this.create_scale_views().then(async () => {
       this.create_listeners();
 
       this.axis_views = new ViewList(this.add_axis, null, this);
@@ -143,7 +142,7 @@ export class MarketMap extends Figure {
         window.removeEventListener('resize', this.debouncedRelayout);
       });
 
-      return Promise.all([Promise.resolve(), axis_views_updated]);
+      await Promise.all([Promise.resolve(), axis_views_updated]);
     });
   }
 
@@ -156,14 +155,10 @@ export class MarketMap extends Figure {
   }
 
   update_plotarea_dimensions() {
-    this.plotarea_width = this.width - this.margin.left - this.margin.right;
-    this.plotarea_height = this.height - this.margin.top - this.margin.bottom;
-    this.column_width = parseFloat(
-      (this.plotarea_width / this.num_cols).toFixed(2)
-    );
-    this.row_height = parseFloat(
-      (this.plotarea_height / this.num_rows).toFixed(2)
-    );
+    const plotarea_width = this.plotareaWidth;
+    const plotarea_height = this.plotareaHeight;
+    this.column_width = parseFloat((plotarea_width / this.num_cols).toFixed(2));
+    this.row_height = parseFloat((plotarea_height / this.num_rows).toFixed(2));
   }
 
   reset_drawing_controls() {
@@ -251,7 +246,6 @@ export class MarketMap extends Figure {
 
     window.requestAnimationFrame(() => {
       // update ranges
-      that.margin = that.model.get('map_margin');
       that.update_plotarea_dimensions();
 
       // transform figure
@@ -260,7 +254,7 @@ export class MarketMap extends Figure {
         'translate(' + that.margin.left + ',' + that.margin.top + ')'
       );
       applyAttrs(that.title, {
-        x: 0.5 * that.plotarea_width,
+        x: 0.5 * that.plotareaWidth,
         y: -(that.margin.top / 2.0),
         dy: '1em',
       });
@@ -841,9 +835,9 @@ export class MarketMap extends Figure {
       tooltip_widget_creation_promise.then((view) => {
         that.tooltip_view = view as Tooltip;
 
-        MessageLoop.sendMessage(view.pWidget, Widget.Msg.BeforeAttach);
+        MessageLoop.sendMessage(getLuminoWidget(view), Widget.Msg.BeforeAttach);
         that.tooltip_div.node().appendChild(view.el);
-        MessageLoop.sendMessage(view.pWidget, Widget.Msg.AfterAttach);
+        MessageLoop.sendMessage(getLuminoWidget(view), Widget.Msg.AfterAttach);
       });
     }
   }

@@ -1,0 +1,2 @@
+::: bqplot.Figure
+    handler: python

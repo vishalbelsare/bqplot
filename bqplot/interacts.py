@@ -12,30 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""
-
-=========
-Interacts
-=========
-
-.. currentmodule:: bqplot.interacts
-
-.. autosummary::
-   :toctree: _generate/
-
-   BrushIntervalSelector
-   BrushSelector
-   HandDraw
-   IndexSelector
-   FastIntervalSelector
-   MultiSelector
-   OneDSelector
-   Interaction
-   PanZoom
-   Selector
-   TwoDSelector
-"""
-
 from traitlets import (Bool, Int, Float, Unicode, Dict,
                        Instance, List, Enum, observe)
 from traittypes import Array
@@ -48,13 +24,11 @@ from ._version import __frontend_version__
 import numpy as np
 
 
+# Decorator registering an interaction class in the registry.
+# If no key is provided, the class name is used as a key. A key is provided
+# for each core bqplot interaction type so that the frontend can use this
+# key regardless of the kernel language.
 def register_interaction(key=None):
-    """Decorator registering an interaction class in the registry.
-
-    If no key is provided, the class name is used as a key. A key is provided
-    for each core bqplot interaction type so that the frontend can use this
-    key regardless of the kernel language.
-    """
     def wrap(interaction):
         name = key if key is not None else interaction.__module__ + \
             interaction.__name__
@@ -90,8 +64,14 @@ class Interaction(Widget):
     _model_module = Unicode('bqplot').tag(sync=True)
     _view_module_version = Unicode(__frontend_version__).tag(sync=True)
     _model_module_version = Unicode(__frontend_version__).tag(sync=True)
-    # We cannot display an interaction outside of a figure
+
+    # We cannot display interactions outside of a figure
+    # for ipywidgets <=7
     _ipython_display_ = None
+
+    # for ipywidgets >=8
+    def _repr_mimebundle_(self, **kwargs):
+        return {'text/plain': str(self)}
 
 
 @register_interaction('bqplot.HandDraw')
@@ -303,7 +283,7 @@ class IndexSelector(OneDSelector):
     color: Color or None (default: None)
         Color of the line representing the index selector.
     line_width: nonnegative integer (default: 0)
-        Width of the line represetning the index selector.
+        Width of the line representing the index selector.
     """
     selected = Array(None, allow_none=True)\
         .tag(sync=True, **array_serialization)
@@ -519,7 +499,7 @@ class MultiSelector(BrushIntervalSelector):
 
     def hidden_selected_changed(self, name, selected):
         actual_selected = {}
-        if(self.read_json is None):
+        if self.read_json is None:
             self.selected = self._selected
         else:
             for key in self._selected:

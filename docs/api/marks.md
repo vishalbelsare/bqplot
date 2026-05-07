@@ -1,0 +1,2 @@
+::: bqplot.marks
+    handler: python

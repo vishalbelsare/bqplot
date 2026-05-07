@@ -50,21 +50,23 @@ export class Axis extends WidgetView {
     super.initialize.apply(this, arguments);
   }
 
-  render() {
+  async render() {
     this.d3el.style('display', this.model.get('visible') ? 'inline' : 'none');
     this.parent = this.options.parent;
 
     const scale_promise = this.set_scale_promise(this.model.get('scale'));
     const offset_promise = this.get_offset_promise();
 
-    Promise.all([scale_promise, offset_promise]).then(() => {
+    return await Promise.all([scale_promise, offset_promise]).then(() => {
       this.create_listeners();
-      this.tick_format = this.generate_tick_formatter();
+      this.create_axis();
       this.set_scales_range();
+      this.update_scales();
+      this.set_tick_values();
+      this.tickformat_changed();
       this.append_axis();
     });
   }
-
   create_listeners() {
     // Creates all event listeners
 
@@ -78,6 +80,7 @@ export class Axis extends WidgetView {
     // Tick attributes
     this.listenTo(this.model, 'change:tick_values', this.set_tick_values);
     this.listenTo(this.model, 'change:tick_format', this.tickformat_changed);
+    this.listenTo(this.model, 'change:tick_labels', this.tick_labels_changed);
     this.listenTo(this.model, 'change:num_ticks', this.set_tick_values);
     this.listenTo(this.model, 'change:tick_rotate', this.apply_tick_styling);
     this.listenTo(this.model, 'change:tick_style', this.apply_tick_styling);
@@ -103,11 +106,7 @@ export class Axis extends WidgetView {
     );
     this.listenTo(this.model, 'change:label_offset', this.update_label_offset);
     this.listenTo(this.model, 'change:visible', this.update_visibility);
-    this.model.on_some_change(
-      ['side', 'orientation'],
-      this.update_display,
-      this
-    );
+    this.listenTo(this.model, 'change:side', this.update_display);
     this.listenTo(this.model, 'change:offset', this.update_offset);
     this.listenTo(this.parent, 'margin_updated', this.parent_margin_updated);
   }
@@ -124,7 +123,10 @@ export class Axis extends WidgetView {
 
   update_display() {
     this.g_axisline.remove();
+    this.create_axis();
+    this.set_tick_values();
     this.set_scales_range();
+    this.tickformat_changed();
     this.append_axis();
   }
 
@@ -193,16 +195,6 @@ export class Axis extends WidgetView {
         this.axis.tickValues(this.axis_scale.scale.ticks());
       }
     }
-    if (
-      this.model.get('tick_format') === null ||
-      this.model.get('tick_format') === undefined
-    ) {
-      if (!isOrdinalScale(this.axis_scale)) {
-        this.tick_format = this.guess_tick_format(this.axis.tickValues());
-      }
-    }
-    this.axis.tickFormat(this.tick_format);
-
     if (this.g_axisline) {
       this.g_axisline
         .transition('set_tick_values')
@@ -224,11 +216,17 @@ export class Axis extends WidgetView {
     this.apply_tick_styling();
   }
 
+  tick_labels_changed() {
+    this.tickformat_changed();
+  }
+
   apply_tick_styling() {
     // Applies current tick styling to all displayed ticks
-    const tickText = this.g_axisline.selectAll('.tick text');
-    applyStyles(tickText, this.model.get('tick_style'));
-    tickText.attr('transform', this.get_tick_transforms());
+    if (this.g_axisline) {
+      const tickText = this.g_axisline.selectAll('.tick text');
+      applyStyles(tickText, this.model.get('tick_style'));
+      tickText.attr('transform', this.get_tick_transforms());
+    }
   }
 
   get_tick_transforms() {
@@ -250,7 +248,7 @@ export class Axis extends WidgetView {
   update_scale_domain() {
     // Sets the scale domain (Range of input values)
 
-    const is_vertical = this.model.get('orientation') === 'vertical';
+    const is_vertical = ['left', 'right'].includes(this.model.get('side'));
 
     const initial_range = is_vertical
       ? this.parent.padded_range('y', this.axis_scale.model)
@@ -267,7 +265,7 @@ export class Axis extends WidgetView {
   update_offset_scale_domain() {
     // Sets the domain (range of input values) of the offset scale
 
-    const is_vertical = this.model.get('orientation') === 'vertical';
+    const is_vertical = ['left', 'right'].includes(this.model.get('side'));
 
     if (this.offset_scale) {
       const initial_range = !is_vertical
@@ -283,6 +281,24 @@ export class Axis extends WidgetView {
   }
 
   generate_tick_formatter() {
+    const default_formatter = this.generate_default_tick_formatter();
+    const tickLabels = this.model.get('tick_labels');
+    if (tickLabels && Object.keys(tickLabels).length > 0) {
+      const formatter = (data) => {
+        let value = tickLabels[data];
+        if (value === undefined) {
+          return default_formatter(data);
+        } else {
+          return value;
+        }
+      };
+      return formatter;
+    } else {
+      return default_formatter;
+    }
+  }
+
+  generate_default_tick_formatter() {
     if (isDateScale(this.axis_scale) || isDateColorScale(this.axis_scale)) {
       if (this.model.get('tick_format')) {
         return d3.utcFormat(this.model.get('tick_format'));
@@ -314,7 +330,7 @@ export class Axis extends WidgetView {
   }
 
   set_scales_range() {
-    const is_vertical = this.model.get('orientation') === 'vertical';
+    const is_vertical = ['left', 'right'].includes(this.model.get('side'));
 
     this.axis_scale.setRange(is_vertical ? [this.height, 0] : [0, this.width]);
     if (this.offset_scale) {
@@ -327,7 +343,7 @@ export class Axis extends WidgetView {
   create_axis() {
     // Creates the initial D3 axis and sets it on this.axis
 
-    const is_vertical = this.model.get('orientation') === 'vertical';
+    const is_vertical = ['left', 'right'].includes(this.model.get('side'));
     const side = this.model.get('side');
 
     if (is_vertical) {
@@ -344,7 +360,6 @@ export class Axis extends WidgetView {
   }
 
   append_axis() {
-    this.create_axis();
     this.update_scales();
 
     // Create initial SVG element
@@ -363,7 +378,6 @@ export class Axis extends WidgetView {
     applyAttrs(lineText, this.get_label_attributes());
 
     // Apply custom settings
-    this.set_tick_values();
     this.update_grid_lines();
     this.update_color();
     this.apply_tick_styling();
@@ -377,7 +391,7 @@ export class Axis extends WidgetView {
      */
     let return_promise = Promise.resolve();
     const offset = this.model.get('offset');
-    const is_vertical = this.model.get('orientation') === 'vertical';
+    const is_vertical = ['left', 'right'].includes(this.model.get('side'));
 
     if (offset.value !== undefined && offset.value !== null) {
       //If scale is undefined but, the value is defined, then we have
@@ -421,18 +435,18 @@ export class Axis extends WidgetView {
   }
 
   get_basic_transform() {
-    const is_vertical = this.model.get('orientation') === 'vertical';
+    const is_vertical = ['left', 'right'].includes(this.model.get('side'));
     const side = this.model.get('side');
 
     if (is_vertical) {
-      return side === 'right' ? this.width : 0;
+      return side === 'right' ? this.width + this.autoOffset : -this.autoOffset;
     } else {
-      return side === 'top' ? 0 : this.height;
+      return side === 'top' ? -this.autoOffset : this.height + this.autoOffset;
     }
   }
 
   get_axis_transform() {
-    const is_vertical = this.model.get('orientation') === 'vertical';
+    const is_vertical = ['left', 'right'].includes(this.model.get('side'));
     if (is_vertical) {
       return 'translate(' + this.process_offset() + ', 0)';
     } else {
@@ -459,7 +473,7 @@ export class Axis extends WidgetView {
     let label_x = 0;
     const label_location = this.model.get('label_location');
     const label_offset = this.calculate_label_offset();
-    const is_vertical = this.model.get('orientation') === 'vertical';
+    const is_vertical = ['left', 'right'].includes(this.model.get('side'));
     const side = this.model.get('side');
 
     if (is_vertical) {
@@ -548,7 +562,7 @@ export class Axis extends WidgetView {
     applyAttrs(axisLabel, this.get_label_attributes());
   }
 
-  update_label_offset(model, offset) {
+  update_label_offset() {
     this.label_offset = this.calculate_label_offset();
     this.g_axisline.select('text.axislabel').attr('y', this.label_offset);
   }
@@ -558,7 +572,7 @@ export class Axis extends WidgetView {
     // of the axis, an offset is set.
 
     let label_offset = this.model.get('label_offset');
-    const is_vertical = this.model.get('orientation') === 'vertical';
+    const is_vertical = ['left', 'right'].includes(this.model.get('side'));
     const side = this.model.get('side');
 
     if (!label_offset) {
@@ -591,12 +605,11 @@ export class Axis extends WidgetView {
   update_grid_lines(animate?: boolean) {
     const grid_type = this.model.get('grid_lines');
     const side = this.model.get('side');
-    const orientation = this.model.get('orientation');
-    const is_x = orientation !== 'vertical';
+    const is_vertical = ['left', 'right'].includes(side);
     const animation_duration =
       animate === true ? this.parent.model.get('animation_duration') : 0;
 
-    let tickSize = orientation === 'vertical' ? -this.width : -this.height;
+    let tickSize = is_vertical ? -this.width : -this.height;
     let tickOffset = 0;
 
     //apply offsets if applicable
@@ -605,7 +618,7 @@ export class Axis extends WidgetView {
 
       if (side === 'bottom' || side == 'right') {
         tickSize = -offset;
-        tickOffset = is_x ? this.height - offset : this.width - offset;
+        tickOffset = !is_vertical ? this.height - offset : this.width - offset;
       } else {
         tickSize += offset;
         tickOffset = -offset;
@@ -626,7 +639,7 @@ export class Axis extends WidgetView {
       .call(this.axis)
       .selectAll('.tick line')
       .attr(
-        is_x ? 'y1' : 'x1',
+        !is_vertical ? 'y1' : 'x1',
         this.offset_scale && grid_type !== 'none' ? tickOffset : null
       )
       .style('stroke-dasharray', grid_type === 'dashed' ? '5, 5' : null);
@@ -659,6 +672,7 @@ export class Axis extends WidgetView {
     //animate axis and grid lines on domain changes
     const animate = true;
     this.set_tick_values(animate);
+    this.tickformat_changed();
     this.update_grid_lines(animate);
   }
 
@@ -837,14 +851,11 @@ export class Axis extends WidgetView {
     };
   }
 
-  _linear_scale_precision(ticks?: any[]): number {
+  _linear_scale_precision(): number {
     if (!(isLinearScale(this.axis_scale) || isColorScale(this.axis_scale))) {
       return -1;
     }
-    ticks =
-      ticks === undefined || ticks === null
-        ? this.axis_scale.scale.ticks()
-        : ticks;
+    let ticks: any[] = this.axis.tickValues();
     // Case where all data is concentrated into one point.
     if (ticks.length === 1) {
       return 1;
@@ -875,19 +886,16 @@ export class Axis extends WidgetView {
     }
   }
 
-  linear_sc_format(ticks?: any[]) {
-    return this.get_format_func(this._linear_scale_precision(ticks));
+  linear_sc_format() {
+    return this.get_format_func(this._linear_scale_precision());
   }
 
-  date_sc_format(ticks?: any[]) {
+  date_sc_format() {
     // assumes that scale is a linear date scale
     if (!isDateScale(this.axis_scale)) {
       return;
     }
-    ticks =
-      ticks === undefined || ticks === null
-        ? this.axis_scale.scale.ticks()
-        : ticks;
+    let ticks: any[] = this.axis.tickValues();
     // diff is the difference between ticks in milliseconds
     const diff = Math.abs(ticks[1] - ticks[0]);
 
@@ -958,18 +966,15 @@ export class Axis extends WidgetView {
     };
   }
 
-  log_sc_format(ticks?: any[]) {
-    return this.get_format_func(this._log_sc_precision(ticks));
+  log_sc_format() {
+    return this.get_format_func(this._log_sc_precision());
   }
 
-  _log_sc_precision(ticks?: any[]): number {
+  _log_sc_precision(): number {
     if (!isLogScale(this.axis_scale)) {
       return -1;
     }
-    ticks =
-      ticks === undefined || ticks === null
-        ? this.axis_scale.scale.ticks()
-        : ticks;
+    let ticks: any[] = this.axis.tickValues();
     const ratio = Math.abs(Math.log10(ticks[1] / ticks[0]));
 
     if (ratio >= 0.301) {
@@ -981,35 +986,76 @@ export class Axis extends WidgetView {
     }
   }
 
-  guess_tick_format(ticks?: any[]) {
+  guess_tick_format() {
     if (isDateScale(this.axis_scale) || isDateColorScale(this.axis_scale)) {
-      return this.date_sc_format(ticks);
+      return this.date_sc_format();
     } else if (
       isLinearScale(this.axis_scale) ||
       isColorScale(this.axis_scale)
     ) {
-      return this.linear_sc_format(ticks);
+      return this.linear_sc_format();
     } else if (isLogScale(this.axis_scale)) {
-      return this.log_sc_format(ticks);
+      return this.log_sc_format();
     }
   }
 
   get width(): number {
-    return (
-      this.parent.width - this.parent.margin.right - this.parent.margin.left
-    );
+    return this.parent.plotareaWidth;
   }
 
   get height(): number {
-    return (
-      this.parent.height - this.parent.margin.top - this.parent.margin.bottom
-    );
+    return this.parent.plotareaHeight;
   }
 
   get margin() {
     return this.parent.margin;
   }
 
+  calculateAutoSize() {
+    // if offset is used, we don't take up any auto layout space
+    if (this.offset_value !== undefined) {
+      return 0;
+    } else {
+      const box = this.getBBox();
+      const side = this.model.get('side');
+      if (side == 'left' || side == 'right') {
+        return box.width;
+      }
+      if (side == 'bottom' || side == 'top') {
+        return box.height;
+      }
+    }
+  }
+
+  getBBox(): DOMRect {
+    // To get the bounding box, we don't want to include the gridlines, so we disable them
+    this.axis.tickSize(6); // Default value is 6
+    this.g_axisline.call(this.axis);
+    // we also don't use the label if the label_offset is negative
+    const negativeLabelOffset =
+      this.model.get('label_offset') && this.model.get('label_offset').length
+        ? this.model.get('label_offset')[0] == '-'
+        : false;
+    if (negativeLabelOffset) {
+      this.g_axisline.select('text.axislabel').style('display', 'none');
+    }
+    // note that we use getBoundingClientRect to take into account transformations (such as rotations)
+    const box = this.d3el.node().getBoundingClientRect();
+    // and restore the gridlines
+    this.update_grid_lines();
+    this.g_axisline.call(this.axis);
+    // and restore label
+    if (negativeLabelOffset) {
+      this.g_axisline.select('text.axislabel').style('display', '');
+    }
+    return box;
+  }
+
+  setAutoOffset(autoOffset) {
+    this.autoOffset = autoOffset;
+  }
+
+  autoOffset: number = 0;
   axis_scale: Scale;
   axis: d3.Axis<d3.AxisDomain>;
   d3el: d3.Selection<HTMLElement, any, any, any>;

@@ -12,20 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""
-
-==========
-Market Map
-==========
-
-.. currentmodule:: bqplot.market_map
-
-.. autosummary::
-   :toctree: _generate/
-
-   MarketMap
-"""
-
 from traitlets import Int, Unicode, List, Dict, Bool, Instance, Float
 from traittypes import Array, DataFrame
 from ipywidgets import (DOMWidget, CallbackDispatcher, Color,
@@ -40,7 +26,7 @@ from ._version import __frontend_version__
 
 class MarketMap(DOMWidget):
 
-    """Waffle wrapped map.
+    """Waffle wrapped map. A MarketMap is not a Mark, it's a custom Figure!
 
     Attributes
     ----------
@@ -81,13 +67,17 @@ class MarketMap(DOMWidget):
         formats for each of the fields for the tooltip data. Order should match
         the order of the tooltip_fields
     freeze_tooltip_location: bool (default: False)
-        if True, freezes the location of the tooltip. If False, tootip will
+        if True, freezes the location of the tooltip. If False, tooltip will
         follow the mouse
     show_groups: bool
         attribute to determine if the groups should be displayed. If set to
         True, the finer elements are blurred
 
     Map Drawing Attributes
+    ----------------------
+
+    Attributes
+    ----------
     cols: int
         Suggestion for no of columns in the map.If not specified, value is
         inferred from the no of rows and no of cells
@@ -104,8 +94,11 @@ class MarketMap(DOMWidget):
         more square cells for each of the groups
 
     Layout Attributes
+    -----------------
 
-    map_margin: dict (default: {top=50, bottom=50, left=50, right=50})
+    Attributes
+    ----------
+    fig_margin: dict (default: {top=50, bottom=50, left=50, right=50})
         Dictionary containing the top, bottom, left and right margins. The user
         is responsible for making sure that the width and height are greater
         than the sum of the margins.
@@ -116,7 +109,10 @@ class MarketMap(DOMWidget):
 
 
     Display Attributes
+    ------------------
 
+    Attributes
+    ----------
     colors: list of colors
         Colors for each of the groups which are cycled over to cover all the
         groups
@@ -136,7 +132,10 @@ class MarketMap(DOMWidget):
         CSS style for the text of each cell
 
     Other Attributes
+    ----------------
 
+    Attributes
+    ----------
     enable_select: bool
         boolean to control the ability to select the cells of the map by
         clicking
@@ -144,22 +143,20 @@ class MarketMap(DOMWidget):
         boolean to control if the map should be aware of which cell is being
         hovered on. If it is set to False, tooltip will not be displayed
 
-    Note
-    ----
+    !!! Note
+        The aspect ratios stand for width / height ratios.
 
-    The aspect ratios stand for width / height ratios.
+        - If the available space is within bounds in terms of min and max aspect
+        ratio, we use the entire available space.
+        - If the available space is too oblong horizontally, we use the client
+        height and the width that corresponds max_aspect_ratio (maximize width
+        under the constraints).
+        - If the available space is too oblong vertically, we use the client width
+        and the height that corresponds to min_aspect_ratio (maximize height
+        under the constraint).
+        This corresponds to maximizing the area under the constraints.
 
-     - If the available space is within bounds in terms of min and max aspect
-       ratio, we use the entire available space.
-     - If the available space is too oblong horizontally, we use the client
-       height and the width that corresponds max_aspect_ratio (maximize width
-       under the constraints).
-     - If the available space is too oblong vertically, we use the client width
-       and the height that corresponds to min_aspect_ratio (maximize height
-       under the constraint).
-       This corresponds to maximizing the area under the constraints.
-
-    Default min and max aspect ratio are both equal to 16 / 9.
+        Default min and max aspect ratio are both equal to 16 / 9.
     """
     names = Array([]).tag(sync=True, **array_serialization)
     groups = Array([]).tag(sync=True, **array_serialization)
@@ -182,7 +179,7 @@ class MarketMap(DOMWidget):
     scales = Dict().tag(sync=True, **widget_serialization)
     axes = List().tag(sync=True, **widget_serialization)
     color = Array([]).tag(sync=True, **array_serialization)
-    map_margin = Dict(dict(top=50, right=50, left=50, bottom=50))\
+    fig_margin = Dict(dict(top=50, right=50, left=50, bottom=50))\
         .tag(sync=True)
 
     layout = LayoutTraitType(kw=dict(min_width='125px'))\

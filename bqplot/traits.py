@@ -32,7 +32,7 @@ import numpy as np
 import pandas as pd
 import warnings
 import datetime as dt
-import six
+
 
 # Date
 
@@ -92,10 +92,10 @@ def convert_to_date(array, fmt='%m-%d-%Y'):
     # returned as such. If it is an np.ndarray of dtype 'object' then conversion
     # to string is tried according to the fmt parameter.
 
-    if(isinstance(array, np.ndarray) and np.issubdtype(array.dtype, np.datetime64)):
+    if isinstance(array, np.ndarray) and np.issubdtype(array.dtype, np.datetime64):
         # no need to perform any conversion in this case
         return array
-    elif(isinstance(array, list) or (isinstance(array, np.ndarray) and array.dtype == 'object')):
+    elif isinstance(array, list) or (isinstance(array, np.ndarray) and array.dtype == 'object'):
         return_value = []
         # Pandas to_datetime handles all the cases where the passed in
         # data could be any of the combinations of
@@ -103,22 +103,22 @@ def convert_to_date(array, fmt='%m-%d-%Y'):
         # Because of the coerce=True flag, any non-compatible datetime type
         # will be converted to pd.NaT. By this comparison, we can figure
         # out if it is date castable or not.
-        if(len(np.shape(array)) == 2):
+        if len(np.shape(array)) == 2:
             for elem in array:
                 temp_val = pd.to_datetime(
-                    elem, errors='coerce', infer_datetime_format=True)
+                    elem, errors='coerce')
                 temp_val = elem if isinstance(temp_val[0], type(pd.NaT)) else temp_val
                 return_value.append(temp_val)
-        elif(isinstance(array, list)):
+        elif isinstance(array, list):
             temp_val = pd.to_datetime(
-                array, errors='coerce', infer_datetime_format=True)
+                array, errors='coerce')
             return_value = array if isinstance(temp_val[0], type(pd.NaT)) else temp_val
         else:
             temp_val = pd.to_datetime(
-                array, errors='coerce', infer_datetime_format=True)
+                array, errors='coerce')
             return_value = array if isinstance(temp_val[0], type(pd.NaT)) else temp_val
         return return_value
-    elif(isinstance(array, np.ndarray)):
+    elif isinstance(array, np.ndarray):
         warnings.warn("Array could not be converted into a date")
         return array
 
@@ -162,7 +162,7 @@ def array_to_json(ar, obj=None, force_contiguous=True):
 
     if ar.dtype.kind == 'O':
         # Try to serialize the array of objects
-        is_string = np.vectorize(lambda x: isinstance(x, six.string_types))
+        is_string = np.vectorize(lambda x: isinstance(x, str))
         is_timestamp = np.vectorize(lambda x: isinstance(x, pd.Timestamp))
         is_array_like = np.vectorize(lambda x: isinstance(x, (list, np.ndarray)))
 

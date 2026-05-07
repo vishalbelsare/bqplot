@@ -25,8 +25,8 @@ export class Map extends Mark {
     const base_render_promise = super.render();
 
     this.map = this.d3el.append('svg').attr('viewBox', '0 0 1200 980');
-    this.width = this.parent.plotarea_width;
-    this.height = this.parent.plotarea_height;
+    this.width = this.parent.plotareaWidth;
+    this.height = this.parent.plotareaHeight;
     this.map_id = widgets.uuid();
     this.enable_hover = this.model.get('enable_hover');
     this.display_el_classes = ['event_layer'];
@@ -381,10 +381,10 @@ export class Map extends Mark {
     this.model.set('selected', []);
     this.touch();
     this.highlight_g.selectAll('.selected').remove();
-    d3.select(this.d3el.node().parentNode)
+    d3.select(this.d3el.node().parentNode as Element)
       .selectAll('path')
       .classed('selected', false);
-    d3.select(this.d3el.node().parentNode)
+    d3.select(this.d3el.node().parentNode as Element)
       .selectAll('path')
       .classed('hovered', false);
 
